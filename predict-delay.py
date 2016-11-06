@@ -37,6 +37,7 @@ def hello_world():
     from_datetime = datetime.strptime(request.args['on_date'], '%Y-%m-%d %H:%M')
     from_loc = request.args['from_loc']
     to_loc = request.args['to_loc']
+    offset = 0 if 'offset' not in request.args else float(request.args['offset'])
 
     our_train = find_train(from_loc, to_loc, from_datetime)
     if not our_train:
@@ -53,8 +54,9 @@ def hello_world():
     res = pandas.DataFrame()
     for station in stations:
         f, t, d, ta = station
-        to_datetime = datetime.strptime('{} {}'.format(d, ta), '%Y-%m-%d %H%M')
-        from_dt = to_datetime - timedelta(hours=2)
+        to_datetime = datetime.strptime('{} {}'.format(d, ta), '%Y-%m-%d %H%M') - \
+                      timedelta(hours=int(offset), minutes=60 * (offset - int(offset)))
+        from_dt = to_datetime - timedelta(hours=2 + int(offset), minutes=60 * (offset - int(offset)))
         rids = get_rids(f, t,
                         datetime.strftime(from_dt, '%Y-%m-%d'), datetime.strftime(from_dt, '%H%M'),
                         datetime.strftime(to_datetime, '%Y-%m-%d'),
