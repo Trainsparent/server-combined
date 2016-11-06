@@ -3,24 +3,25 @@ from time import mktime
 from datetime import datetime, timedelta, date
 from pandas.io.json import json_normalize
 from functools import lru_cache
-import progressbar
 from concurrent import futures
 
 from const import headers, reasons
 
 
+@lru_cache(maxsize=None)
 def get_rids(f, t, fd, ft, td, tt):
     w = datetime.strptime(fd, '%Y-%m-%d').weekday()
     d = 'WEEKDAY' if w < 5 else 'SATURDAY' if w == 5 else 'SUNDAY'
     data = dict(from_loc=f, to_loc=t, from_time=ft, to_time=tt, from_date=fd, to_date=td, days=d)
     a = requests.post('https://hsp-prod.rockshore.net/api/v1/serviceMetrics', headers=headers,
                       data=json.dumps(data)).json()
-    return [dict(rids=s['serviceAttributesMetrics']['rids'], gbtt_ptd=s['serviceAttributesMetrics']['gbtt_ptd'],
-                 gbtt_pta=s['serviceAttributesMetrics']['gbtt_pta']) for s in a['Services']]
+    return [(s['serviceAttributesMetrics']['rids'], s['serviceAttributesMetrics']['gbtt_ptd'],
+             s['serviceAttributesMetrics']['gbtt_pta']) for s in a['Services']]
 
 
+@lru_cache(maxsize=None)
 def load_train_road(arg):
-    r, rids_row, f, t, adj_only, range_only = arg
+    r, (rids, gbtt_ptd, gbtt_pta), f, t, adj_only, range_only = arg
     station_report_for_rid = []
     res = requests.post('https://hsp-prod.rockshore.net/api/v1/serviceDetails',
                         headers=headers, data=json.dumps(dict(rid=r))).json()
@@ -41,8 +42,8 @@ def load_train_road(arg):
         e['rid'] = r
         e['toc_code'] = res['serviceAttributesDetails']['toc_code']
         e['date_of_service'] = res['serviceAttributesDetails']['date_of_service']
-        e['dep'] = rids_row['gbtt_ptd']
-        e['ar'] = rids_row['gbtt_pta']
+        e['dep'] = gbtt_ptd
+        e['ar'] = gbtt_pta
         e['gad'] = '{}-{}'.format(e['dep'], e['ar'])
         station_report_for_rid.append(e)
     if not range_only:
@@ -70,9 +71,9 @@ def station_report(rids, f, t, adj_only, range_only):
         return pandas.DataFrame(), dict()
     count = 0
     req_obj = list()
-    for rids_row in rids:
-        for r in rids_row['rids']:
-            req_obj.append((r, rids_row, f, t, adj_only, range_only))
+    for (rids, gbtt_ptd, gbtt_pta) in rids:
+        for r in rids:
+            req_obj.append((r, (tuple(rids), gbtt_ptd, gbtt_pta), f, t, adj_only, range_only))
             count += 1
 
     station_data = []
