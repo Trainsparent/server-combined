@@ -10,7 +10,7 @@ from const import headers, reasons
 
 
 def get_rids(f, t, fd, ft, td, tt):
-    data = dict(from_loc=f, to_loc=t, from_time=ft, to_time=tt, from_date=fd, to_date=td, days="WEEKDAY")
+    data = dict(from_loc=f, to_loc=t, from_time=ft, to_time=tt, from_date=fd, to_date=td, days="SUNDAY")
     a = requests.post('https://hsp-prod.rockshore.net/api/v1/serviceMetrics', headers=headers,
                       data=json.dumps(data)).json()
     return [dict(rids=s['serviceAttributesMetrics']['rids'], gbtt_ptd=s['serviceAttributesMetrics']['gbtt_ptd'],
@@ -64,6 +64,8 @@ def ts_to_dt(a):
 
 
 def station_report(rids, f, t, adj_only, range_only):
+    if not rids:
+        return pandas.DataFrame(), dict()
     count = 0
     req_obj = list()
     for rids_row in rids:

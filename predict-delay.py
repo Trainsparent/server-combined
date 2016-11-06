@@ -26,6 +26,7 @@ def hist():
     to_loc = request.args['to_loc']
     our_train = find_train(from_loc, to_loc, from_datetime, to_datetime)
     maybe_delayed, maybe_delayed_loc_map = station_report(our_train, from_loc, to_loc, False, True)
+    maybe_delayed.set_value(0, 'actual_ta', our_train[0]['gbtt_ptd'])
     return jsonify(list(dict(actual_delta=str(i.a_delta), loc=str(i.location), date=str(i.date_of_service),
                              reason=str(i.late_canc_reason), actual_ta=str(i.actual_ta)) for i in
                         maybe_delayed.itertuples()))
